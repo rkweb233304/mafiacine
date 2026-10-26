@@ -1,55 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { auth, googleAuthProvider } from './lib/firebase.ts';
-import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
 import { 
-  Play, Search, LogOut, Menu, X, Settings, HelpCircle, 
+  Play, Search, Menu, X, Settings, HelpCircle, 
   Home, Grid, History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Movie {
-  id: number;
+  id: string;
   title: string;
   description: string;
   posterUrl: string;
   videoUrl: string;
   genre: string;
   rating: string;
-  releaseYear: number;
+  releaseYear: string;
   duration: string;
 }
 
-type TabType = 'home' | 'category' | 'history';
-
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [activeTab, setActiveTab] = useState('home');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-    });
-    fetchMovies();
-    return () => unsubscribe();
+    fetchData();
   }, []);
 
-  const fetchMovies = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/movies');
-      const data = await res.json();
-      setMovies(data);
+      const res = await fetch('/api/data');
+      const { movies: movieData } = await res.json();
+      if (movieData) {
+        setMovies(movieData.map((row: any) => ({
+          id: row[0], title: row[1], description: row[2], posterUrl: row[3],
+          videoUrl: row[4], genre: row[5], rating: row[6], releaseYear: row[7], duration: row[8]
+        })));
+      }
     } catch (error) {
-      console.error('Failed to fetch movies:', error);
+      console.error('Failed to fetch data:', error);
     }
   };
-
-  const login = () => signInWithPopup(auth, googleAuthProvider);
-  const handleLogout = () => { signOut(auth); setIsMenuOpen(false); };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans">
@@ -70,7 +62,6 @@ export default function App() {
               <div className="flex flex-col gap-6 text-sm font-bold uppercase tracking-widest">
                 <button className="flex items-center gap-3"><Settings className="w-5 h-5" /> Settings</button>
                 <button className="flex items-center gap-3"><HelpCircle className="w-5 h-5" /> Help</button>
-                {user && <button onClick={handleLogout} className="flex items-center gap-3 text-[#E11D48]"><LogOut className="w-5 h-5" /> Sign Out</button>}
               </div>
             </motion.div>
           </>
@@ -98,7 +89,7 @@ export default function App() {
           { id: 'category', icon: Grid, label: 'Category' },
           { id: 'history', icon: History, label: 'History' },
         ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as TabType)} className={`flex flex-col items-center ${activeTab === tab.id ? 'text-[#E11D48]' : 'text-white/40'}`}>
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center ${activeTab === tab.id ? 'text-[#E11D48]' : 'text-white/40'}`}>
             <tab.icon className="w-5 h-5" />
             <span className="text-[9px] font-bold uppercase mt-1">{tab.label}</span>
           </button>
