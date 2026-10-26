@@ -10,12 +10,25 @@ async function startServer() {
 
   app.get('/api/data', async (req, res) => {
     try {
-      const response = await fetch(WEB_APP_URL);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const response = await fetch(WEB_APP_URL, {
+        signal: controller.signal,
+        redirect: 'follow',
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       res.json(data);
     } catch (error) {
-      console.error('Failed to fetch from Apps Script:', error);
-      res.status(500).json({ error: 'Failed to fetch data' });
+      console.warn('Google Apps Script fetch fallback:', error);
+      // Fallback safely so front-end never crashes
+      res.json({ movies: [], banner: [] });
     }
   });
 
